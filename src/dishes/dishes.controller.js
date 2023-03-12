@@ -25,14 +25,26 @@ function dishHasRequiredProperties(req, res, next) {
     })
 }
 
+function dishExists(req, res, next) {
+    const { dishId } = req.params
+    const foundDish = dishes.find(dish => dish.id === Number(dishId))
+    if (foundDish) {
+        res.locals.dish = foundDish
+        next()
+    }
+        next({ notFound })
+}
+
+/*
 // Gets max ID from urls data
 let lastDishId = dishes.reduce((maxId, url) => Math.max(maxId, url.id), 0)
+*/
 
 // Creates new dish {} w/ID, then push into dishes data
 function create(req, res) {
     const { data: { id, name, description, price, image_url } = { } } = req.body
     const newDish = {
-        id: lastDishId++,
+        id: nextId,
         name, 
         description, 
         price, 

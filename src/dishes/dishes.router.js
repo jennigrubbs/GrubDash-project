@@ -8,7 +8,7 @@ const errorHandler = require("../errors/errorHandler")
 const notFound = require("../errors/notFound")
 const ordersRouter = require("../orders/orders.router")
 
-router.dish("/:dishId/dishes", controller.dishExists, dishesRouter)
+router.dish("/:dishId/dishes", controller.dishExists, dishes.router)
 
 router
     .route("/dishes")
