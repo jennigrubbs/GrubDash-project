@@ -9,103 +9,151 @@ const nextId = require("../utils/nextId");
 // TODO: Implement the /orders handlers needed to make the tests pass
 
 // List all the orders
-function listOrders(req, res) {
+function list(req, res) {
     res.json({ data: orders })
 }
 
 // Checks for valid order with specified properties inputed from the req body
-function orderHasRequiredProperties(req, res, next) {
-    const { data: { id, deliverTo, mobileNumber, status, dishes } = { } } = req.body;
-    if ({ id, deliverTo, mobileNumber, status, dishes }) {
-        return next()
-    }
-    next({
-        status: 400, 
-        message: "Order must include `${{ id, deliverTo, mobileNumber, status, dishes }}` properties.",
+function orderHasProperties(req, res, next) {
+    const { data } = req.body 
+    const requiredProperties = ['deliverTo', 'mobileNumber', 'dishes']    
+    requiredProperties.forEach(property => {
+        if (!data[property]) {
+            next({
+                status: 400,
+                message: `Order must include a ${prop}`
+            })
+        }
+        if (property === 'dishes') {
+            // check if data['dishes'] is an array OR || if it has length > 0
+            if (data[property].length === 0 || !Array.isArray(data[property])) {   
+                next({
+                    status: 400,
+                    message: 'Order must include at least one dish'
+                })
+            }
+            // check each dish for having a quantity
+            data[property].forEach((dish, index) => {
+                if (!dish['quantity'] || !Number.isInteger(dish['quantity']) || dish['quantity'] <= 0) {
+                    next({
+                        status: 400,
+                        message: `Dish ${index} must have a quantity that is an integer greater than 0`
+                    })
+                }
+            })
+        }
     })
+    next()
 }
-
-function orderExists(req, res, next) {
-    const { orderId } = req.params
-    const foundOrder = orders.find(order => order.id === Number(orderId))
-    if (foundOrder) {
-        res.locals.order = foundOrder
-        next()
-    }
-        next({ notFound })
-}
-
-/*
-// Gets max ID from urls data
-let lastDishId = orders.reduce((maxId, url) => Math.max(maxId, order.id), 0)
-*/
 
 // Creates new order {} w/ID, then push into orders data
 function create(req, res) {
-    const { data: { id, deliverTo, mobileNumber, status, dishes } = { } } = req.body
-    const newDish = {
+    const { data: { deliverTo, mobileNumber, dishes, status } = {} } = req.body
+    const order = {
         id: nextId,
         deliverTo, 
         mobileNumber, 
         status, 
         dishes,
     }
-    orders.push(newOrder)
-    res.status(201).json({ data: newOrder })
+    orders.push(order)
+    res.status(201).json({ data: order })
+}
+
+const foundOrder = (orderId) => {
+    return orders.find(({id}) => id === orderId)
+}
+
+function orderExists(req, res, next) {
+    const { orderId } = req.params
+    const foundOrder = orders.find((order) => order.id == orderId)
+    if (foundOrder) {
+        res.locals.order = foundOrder
+        next()
+    }
+        next({ 
+            status: 404,
+            message: `Order does not exist: ${orderId}.`,
+        })
 }
 
 function read(req, res) {
-    const { orderId } = req.params
-    const orderNeeded = foundOrder(orderId)
-    res.json({ data: orderNeeded })
-  }
-
-function sendOrders(req, res) {
-    const { orderToSend } = req.params
-    const allOrders = orders.filter(order => order.orderId === Number(orderId))
-    res.json( { data: allOrders })
+    res.json({ data: res.locals.order })
 }
 
-function readOrderForOrderId(req, res) {
+function doesOrderMatchOrderId(req, res, next) {
+    const { data: { id, deliverTo, mobileNumber, status, dishes } = {} } = req.body
     const { orderId } = req.params
-    const resultOrder = orders.filter(order => order.orderId === Number(orderId)).find(order => order.id === Number(orderId))
-    res.json( { data: resultOrder })
-}
-
-function update(req, res) {
-    const { orderId } = req.params
-    const foundOrder = findOrder(orderId)
-    const orderIndex = orders.findIndex((order) => order.id === Number(orderId))
-    const { data: { id, deliverTo, mobileNumber, status, dishes } = { } } = req.body
-    // Replace the old object at dishIndex
-    orders.splice(orderIndex, 1, {
-      data: {
-          ...orders
-        }
-    });
-    res.json({ data: order })
-}
-
-function deleteOrder(req, res) {
-    const { orderId } = req.params
-    const orderToDelete = orders.find(order => order.id === Number(orderId))
-    if (orderToDelete) {
-        orders = orders.filter(order => order.id !== id)
-    } else {
-        res.status(404).json({ message: "Order does not exist."})
+    if (!req.body.data.id || res.body.data.id === "") {
+        next()
+    } 
+    if (req.body.data.id != res.locals.order.id) {
+        next({
+            status: 400,
+            message: `Order id does not match route id. Order: ${id}, Route: ${orderId}.`,
+        })
+    }
+    else {
+        next()
     }
 }
 
+function checkOrderStatus(req, res, next) {
+    const { data: { id, deliverTo, mobileNumber, status, dishes } = {} } = req.body
+    if (!status || status === "" || status === "invalid") {
+        next({
+            status: 400,
+            message: "Order must have a status of pending, preparing, out-for-delivery, delivered",
+        })
+    }
+    else if (status === "delivered") {
+        next({
+            status: 400,
+            message: "A delivered order cannot be changed",
+        })
+    }
+    else {
+        next()
+    }
+}
+
+function update(req, res, next) {
+    const order = res.locals.order
+    const { data: { deliverTo, mobileNumber, status, dishes } = {} } = req.body
+
+    order.id = res.locals.order.id
+    order.deliverTo = deliverTo
+    order.mobileNumber = mobileNumber
+    order.status = status
+    order.dishes = dishes   
+
+    res.json({ data: order })
+}
+
+function statusIsPending(req, res, next) {
+    const { status } = res.locals.order
+    if (status !== "pending") {
+        next({
+            status: 400,
+            message: "An order cannot be deleted unless it is pending.",
+        })
+    }
+    next()
+}
+
+function destroy(req, res) {
+    const { orderId } = req.params
+    const orderIndexToDelete = orders.findIndex((order) => order.id === Number(orderId))
+    const deletedOrders = orders.splice(orderIndexToDelete, 1)
+    res.sendStatus(204)
+}
 
 module.exports = {
-    create: [orderHasRequiredProperties, create],
-    listOrders,
-    readOrder: [orderExists, sendOrders],
-    readOrderForOrderId: [orderExists, readOrderForOrderId],
-    read: [orderExists, read],
-    update: [orderExists, orderHasRequiredProperties, update],
-    orderExists,
-    deleteOrder,
+    list,
+    create: [orderHasProperties, create,],
+    read: [orderExists, read,],
+    update: [orderExists, orderHasProperties, doesOrderMatchOrderId, checkOrderStatus, update,],
+    destroy: [orderExists, statusIsPending, destroy]
 }
 
 /*
