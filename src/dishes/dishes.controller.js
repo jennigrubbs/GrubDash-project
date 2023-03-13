@@ -9,40 +9,80 @@ const nextId = require("../utils/nextId");
 // TODO: Implement the /dishes handlers needed to make the tests pass
 
 // List all the dishes
-function listDishes(req, res) {
+function list(req, res) {
     res.json({ data: dishes })
 }
 
 // Checks for valid dish with specified properties inputed from the req body
-function dishHasRequiredProperties(req, res, next) {
-    const { data: { id, name, description, price, image_url } = { } } = req.body;
-    if ({ id, name, description, price, image_url }) {
-        return next()
-    }
-    next({
-        status: 400, 
-        message: "Dish must include `${{ id, name, description, price, image_url }}` properties.",
+function dishHasProperties(req, res, next) {
+    const { data } = req.body;
+    const requiredProperties = ['name', 'description', 'price', 'image_url']
+    requiredProperties.forEach(property => {
+        if (!data[property]) {
+            next({
+                status: 400,
+                message: `Dish must include a ${property}`
+            })
+        }
+        if (property === 'price') {
+            if (!Number.isInteger(data['price']) || data['price'] <= 0)
+            next({
+                status: 400,
+                message: `Dish must have a price that is an integer greater than 0`
+            })
+        }
     })
+    return next()
 }
 
-function dishExists(req, res, next) {
+const findDishId = (dishId) => {
+    return dishes.find(({id}) => id === dishId)
+}
+
+function dishIdExists(req, res, next) {
     const { dishId } = req.params
-    const foundDish = dishes.find(dish => dish.id === Number(dishId))
+    const foundDish = dishes.find((dish) => dish.id === dishId)
     if (foundDish) {
         res.locals.dish = foundDish
         next()
     }
-        next({ notFound })
+        next({ 
+            status: 404,
+            message: `Dish does not exist: ${dishId}.`,
+        })
 }
 
-/*
-// Gets max ID from urls data
-let lastDishId = dishes.reduce((maxId, url) => Math.max(maxId, url.id), 0)
-*/
+const doesIdMatchDishId = (req, res, next) => {
+    const { dishId } = req.params
+    const { data: { id } = {} } = req.body
+    if (id && id !== dishId) {
+        next({
+            status: 400,
+            message: `Dish id does not match route id. Dish: ${id}, Route: ${dishId}`,
+        })
+    }
+    next()
+}
+
+function read(req, res) {
+    res.json({ data: res.locals.dish })
+}
+
+function update(req, res, next) {
+    const dish = res.locals.dish
+    const { data: { name, description, price, image_url } = {} } = req.body    
+    
+    dish.name = name
+    dish.descriptipon = description
+    dish.price = price
+    dish.image_url = image_url
+
+    res.json({ data: dish })
+}
 
 // Creates new dish {} w/ID, then push into dishes data
 function create(req, res) {
-    const { data: { id, name, description, price, image_url } = { } } = req.body
+    const { data: { name, description, price, image_url } = { } } = req.body
     const newDish = {
         id: nextId,
         name, 
@@ -54,47 +94,11 @@ function create(req, res) {
     res.status(201).json({ data: newDish })
 }
 
-function read(req, res) {
-    const { dishId } = req.params
-    const dishNeeded = foundDish(dishId)
-    res.json({ data: dishNeeded })
-  }
-
-function sendDishes(req, res) {
-    const { dishToSend } = req.params
-    const allDishes = dishes.filter(dish => dish.dishId === Number(dishId))
-    res.json( { data: allDishes })
-}
-
-function readDishForDishId(req, res) {
-    const { dishId } = req.params
-    const resultDish = dishes.filter(dish => dish.dishId === Number(dishId)).find(dish => dish.id === Number(dishId))
-    res.json( { data: resultDish })
-}
-
-function update(req, res) {
-    const { dishId } = req.params
-    const foundDish = findDish(dishId)
-    const dishIndex = dishes.findIndex((dish) => dish.id === Number(dishId))
-    const { data: { id, name, description, price, image_url } = { } } = req.body
-    // Replace the old object at dishIndex
-    dishes.splice(dishIndex, 1, {
-      data: {
-          ...dish
-        }
-    });
-    res.json({ data: dish })
-}
-
-
 module.exports = {
-    create: [dishHasRequiredProperties, create],
-    listDishes,
-    readDish: [dishExists, sendDishes],
-    readDishForDishId: [dishExists, readDishForDishId],
-    read: [dishExists, read],
-    update: [dishExists, dishHasRequiredProperties, update],
-    dishExists,
+    list,
+    read: [dishIdExists, read],
+    update: [dishIdExists, dishHasProperties, doesIdMatchDishId, update],
+    create: [dishHasProperties, create],
 }
 
 /*
