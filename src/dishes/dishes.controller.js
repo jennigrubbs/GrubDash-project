@@ -9,7 +9,7 @@ const nextId = require("../utils/nextId");
 // TODO: Implement the /dishes handlers needed to make the tests pass
 
 // List all the dishes
-function list(req, res) {
+function listDishes(req, res) {
     res.json({ data: dishes })
 }
 
@@ -89,7 +89,7 @@ function update(req, res) {
 
 module.exports = {
     create: [dishHasRequiredProperties, create],
-    list,
+    listDishes,
     readDish: [dishExists, sendDishes],
     readDishForDishId: [dishExists, readDishForDishId],
     read: [dishExists, read],
