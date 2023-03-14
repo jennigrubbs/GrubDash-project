@@ -6,14 +6,15 @@ const methodNotAllowed = require("../errors/methodNotAllowed")
 
 router
     .route("/")
-    .post(controller.list)
-    .get(controller.create)
+    .get(controller.list)
+    .post(controller.create);
 
 router
     .route("/:dishId")
     .get(controller.read)
     .put(controller.update)
-    .all(methodNotAllowed)
+    .delete(methodNotAllowed);
+
 
 module.exports = router;
 
