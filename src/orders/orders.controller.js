@@ -76,9 +76,13 @@ function orderIdExists(req, res, next) {
     })
 }
 
+// Read the order
+
 function read(req, res) {
      res.json({data:res.locals.order});
 }
+
+// Check if the order id matches the route id
 
 function validateId(req, res, next) {
     const { data: { id, deliverTo, mobileNumber, status, dishes } = {} } = req.body;
@@ -97,6 +101,8 @@ function validateId(req, res, next) {
     }
   
 }
+
+// Check what the status is of a specific order for whether it can be changed
 
 function validateStatus(req, res, next) {
     const { data: { id, deliverTo, mobileNumber, status, dishes } = {} } = req.body;
@@ -117,7 +123,6 @@ function validateStatus(req, res, next) {
     }
 }
 
-
 function update(req, res, next) {
     const order = res.locals.order;
     const { data: { deliverTo, mobileNumber, status, dishes } = {} } = req.body;
@@ -131,6 +136,8 @@ function update(req, res, next) {
     res.json({ data: order });
 }
 
+// Check if an order is pending for whether it can be deleted or not
+
 function orderIsPending(req, res, next) {
     const { status } = res.locals.order;
     if (status !== "pending") {
@@ -141,6 +148,8 @@ function orderIsPending(req, res, next) {
     }
     next();
 }
+
+// Use destroy for delete function since delete is a reserved word in JS
 
 function destroy(req, res) {
     const { orderId } = req.params;

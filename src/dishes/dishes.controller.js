@@ -7,27 +7,27 @@ const dishes = require(path.resolve("src/data/dishes-data"));
 // Use this function to assign ID's when necessary
 const nextId = require("../utils/nextId");
 
-// GET /dishes - This route will list all the existing dish data in the response.
+// Use GET /dishes as the route - It will list all the existing dish data in the response.
 
 function list (req, res) {
     res.json({ data: dishes });
 }
 
-// POST /dishes - This route will save the dish and have the newly created dish in the response.
+// Use POST /dishes as the route - It will save the dish and have the newly created dish in the response.
 
 // Check for valid dish with specified properties inputed from the req body
 
 const checkRequiredProperties = (req, res, next) => {
     const { data } = req.body;
     const requiredProps = ['name', 'description', 'price', 'image_url'];
-    requiredProps.forEach(prop => {
-        if (!data[prop]) {
+    requiredProps.forEach(property => {
+        if (!data[property]) {
         next({
             status: 400, 
-            message: `Dish must include a ${prop}`
+            message: `Dish must include a ${property}`
         });
         }
-        if (prop === 'price') {
+        if (property === 'price') {
             if (!Number.isInteger(data['price']) || data['price'] <= 0)
                 next({
                     status: 400, 
@@ -53,7 +53,7 @@ function dishIdExists(req, res, next) {
     })
 }
 
-// Check if id info all matches
+// Check if id info all matches as it should
 
 const doesIdMatchDishId = (req, res, next) => {
     const { dishId } = req.params;
